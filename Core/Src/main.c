@@ -54,7 +54,8 @@ SPI_HandleTypeDef hspi2;
 
 /* USER CODE BEGIN PV */
 
-uint16_t audiobuffer[48000] __attribute__((section (".audio")));
+// Flag to indicate that dumping is done
+__attribute__((used)) uint32_t dump_done;
 
 /* USER CODE END PV */
 
@@ -73,6 +74,16 @@ static void MX_NVIC_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void HAL_Delay(uint32_t Delay)
+{
+  while (Delay--) {
+    // Accurate at 48MHz sysclock
+    for (int i = 0; i < 2 * 48000 / 3; i++) {
+      __NOP();
+    }
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -115,18 +126,36 @@ int main(void)
   // lcd_init(&hspi2, &hltdc);
   // memset(framebuffer, 0xff, 320*240*2);
 
+  // SPI_MODE or QUAD_MODE
+  quad_mode_t quad_mode = SPI_MODE;
+
+  // VENDOR_MX:   MX25U8035F, Nintendo Stock Flash
+  // VENDOR_ISSI: IS25WP128F, 128Mb large flash
+  spi_chip_vendor_t vendor = VENDOR_MX;
+
+  // Dump flash with normal commands
+  memset(0x24000000, '\xFF', 1024 * 1024);
+  OSPI_Init(&hospi1, quad_mode, vendor);
+  OSPI_Read(&hospi1, 0, 0x24000000, 1024 * 1024);
+
+  dump_done = 1;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  flash_memory_map(&hospi1);
+  while (1)
+  {
+    /* USER CODE END WHILE */
 
+    // Blink slowly to indicate that dumping is done
+    lcd_backlight_off();
+    HAL_Delay(2000);
+    lcd_backlight_on();
+    HAL_Delay(2000);
 
-  while(1) {
-
+    /* USER CODE BEGIN 3 */
   }
-
-  
   /* USER CODE END 3 */
 }
 
